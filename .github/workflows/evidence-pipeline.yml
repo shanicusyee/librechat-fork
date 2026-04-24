@@ -1,0 +1,229 @@
+name: Evidence Pipeline (Dev)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-1
+
+      - name: Login to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image metadata
+        id: meta
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Copy librechat.yaml into build context
+        run: |
+          # This repo IS the LibreChat fork. librechat.yaml at the root is
+          # picked up by LibreChat's own Dockerfile during the build.
+          # Ensure it is in place (it already lives at the repo root).
+          test -f librechat.yaml && echo "librechat.yaml found at repo root" || { echo "::error::librechat.yaml not found at repo root"; exit 1; }
+
+      - name: Build Docker image using LibreChat Dockerfile
+        run: |
+          # Build using LibreChat's own Dockerfile from the fork.
+          # The repo root IS the LibreChat source tree, so the default
+          # Dockerfile at the project root is LibreChat's multi-stage build.
+          docker build \
+            -t ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }} \
+            .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }}
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r evidence_agent/requirements.txt
+
+      - name: Run tests with JUnit XML output
+        run: |
+          pytest evidence_agent/tests/ --junitxml=test-results/report.xml -v
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/report.xml
+
+  deploy-dev:
+    name: Deploy to Dev
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      app_url: ${{ steps.alb-url.outputs.app_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TERRAFORM_BACKEND_BUCKET }}" \
+            -backend-config="key=evidence-pipeline-chat-app/terraform.tfstate" \
+            -backend-config="region=ap-southeast-1"
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: |
+          terraform apply -auto-approve \
+            -var="s3_bucket_name=${{ secrets.S3_BUCKET_NAME }}"
+
+      - name: Get ALB URL
+        id: alb-url
+        working-directory: terraform
+        run: |
+          ALB_URL=$(terraform output -raw alb_url)
+          echo "app_url=${ALB_URL}" >> "$GITHUB_OUTPUT"
+          echo "ALB URL: ${ALB_URL}"
+
+      - name: Force new ECS deployment
+        run: |
+          ECS_CLUSTER=$(cd terraform && terraform output -raw ecs_cluster_name)
+          ECS_SERVICE=$(cd terraform && terraform output -raw ecs_service_name)
+          aws ecs update-service \
+            --cluster "${ECS_CLUSTER}" \
+            --service "${ECS_SERVICE}" \
+            --force-new-deployment \
+            --region ap-southeast-1
+
+      - name: Poll health check endpoint
+        run: |
+          APP_URL="${{ steps.alb-url.outputs.app_url }}"
+          HEALTH_URL="${APP_URL}/api/health"
+          echo "Polling ${HEALTH_URL} for HTTP 200 (timeout: 120s)..."
+          SECONDS=0
+          while [ $SECONDS -lt 120 ]; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${HEALTH_URL}" || true)
+            if [ "${HTTP_STATUS}" = "200" ]; then
+              echo "Health check passed (HTTP ${HTTP_STATUS}) after ${SECONDS}s"
+              exit 0
+            fi
+            echo "Health check returned HTTP ${HTTP_STATUS}, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error::Health check timed out after 120s (last status: ${HTTP_STATUS})"
+          exit 1
+
+      - name: Annotate failure
+        if: failure()
+        run: |
+          echo "::error::Deploy to dev failed. Check Terraform apply and ECS deployment logs above."
+
+  evidence:
+    name: Evidence Collection
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-southeast-1
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Evidence Agent dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r evidence_agent/requirements.txt
+
+      - name: Download test results artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+
+      - name: Run Evidence Agent
+        id: evidence-run
+        env:
+          APP_URL: ${{ needs.deploy-dev.outputs.app_url }}
+          S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          AWS_REGION: ap-southeast-1
+          TEST_REPORT_PATH: test-results/report.xml
+        run: |
+          python -m evidence_agent.main 2>&1 | tee evidence-output.log
+          S3_URI=$(grep -oP '(?<=Evidence artifacts uploaded to: ).*' evidence-output.log || echo "")
+          echo "s3_uri=${S3_URI}" >> "$GITHUB_OUTPUT"
+
+      - name: Output S3 URI in job summary
+        run: |
+          S3_URI="${{ steps.evidence-run.outputs.s3_uri }}"
+          echo "## Evidence Collection Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ Evidence artifacts uploaded to:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`${S3_URI}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Log diagnostic details on failure
+        if: failure()
+        run: |
+          echo "::error::Evidence collection failed. See diagnostic details below."
+          echo "--- Evidence Agent Output ---"
+          cat evidence-output.log 2>/dev/null || echo "No output log available."
+          echo "--- Environment ---"
+          echo "APP_URL: ${{ needs.deploy-dev.outputs.app_url }}"
+          echo "S3_BUCKET: (from secrets)"
+          echo "GITHUB_RUN_ID: ${{ github.run_id }}"
+          echo "AWS_REGION: ap-southeast-1"

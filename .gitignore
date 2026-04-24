@@ -178,3 +178,13 @@ claude-flow
 hive-mind-prompt-*.txt
 CLAUDE.md
 .gsd
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Python
+__pycache__/
+*.pyc
