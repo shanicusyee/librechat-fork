@@ -198,7 +198,12 @@ resource "aws_ecs_task_definition" "app" {
       ]
       environment = [
         { name = "MONGO_URI", value = "mongodb://localhost:27017/librechat" },
-        { name = "AWS_DEFAULT_REGION", value = data.aws_region.current.name }
+        { name = "AWS_DEFAULT_REGION", value = data.aws_region.current.name },
+        { name = "CREDS_KEY", value = "f34be427ebb29de8d88c107a71546019685ed8b241d8f2ed00c3df97ad2566f0" },
+        { name = "CREDS_IV", value = "e2341419ec3dd3d19b13a1a87fafcbfb" },
+        { name = "JWT_SECRET", value = "16f8c0ef4a5d391b26034086c628469d3f9f497f08163ab9b40137092f2909ef" },
+        { name = "JWT_REFRESH_SECRET", value = "eaa5191d9c5bc882a3a901c452a1a0d5b51a0e4b5c7e3e2a7e0c1d8f5a6b7c8d" },
+        { name = "ALLOW_REGISTRATION", value = "true" }
       ]
       healthCheck = {
         command     = ["CMD-SHELL", "wget -qO- http://localhost:3080/api/health || exit 1"]

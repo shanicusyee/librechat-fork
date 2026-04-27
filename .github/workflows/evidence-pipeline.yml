@@ -43,8 +43,16 @@ jobs:
 
       - name: Build Docker image using LibreChat Dockerfile
         run: |
-          # Build using LibreChat's own Dockerfile from the fork.
+          # Build using LibreChat's own Dockerfile, then add librechat.yaml
           docker build \
+            -t ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }} \
+            -t ${{ secrets.ECR_REPOSITORY_URL }}:latest \
+            .
+          # Create a thin layer that copies librechat.yaml into the image
+          echo 'FROM ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }}' > Dockerfile.evidence
+          echo 'COPY librechat.yaml /app/librechat.yaml' >> Dockerfile.evidence
+          docker build \
+            -f Dockerfile.evidence \
             -t ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }} \
             -t ${{ secrets.ECR_REPOSITORY_URL }}:latest \
             .
