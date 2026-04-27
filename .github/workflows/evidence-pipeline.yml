@@ -126,6 +126,12 @@ jobs:
             -backend-config="key=evidence-pipeline-chat-app/terraform.tfstate" \
             -backend-config="region=ap-southeast-1"
 
+      - name: Terraform Refresh
+        working-directory: terraform
+        run: |
+          terraform refresh \
+            -var="s3_bucket_name=${{ secrets.S3_BUCKET_NAME }}"
+
       - name: Terraform Apply
         working-directory: terraform
         run: |
