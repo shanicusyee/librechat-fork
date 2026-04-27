@@ -48,9 +48,12 @@ jobs:
             -t ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }} \
             -t ${{ secrets.ECR_REPOSITORY_URL }}:latest \
             .
-          # Create a thin layer that copies librechat.yaml into the image
+          # Create a thin layer that copies librechat.yaml and seed script into the image
           echo 'FROM ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }}' > Dockerfile.evidence
           echo 'COPY librechat.yaml /app/librechat.yaml' >> Dockerfile.evidence
+          echo 'COPY scripts/seed-user.js /app/seed-user.js' >> Dockerfile.evidence
+          echo 'RUN echo "#!/bin/sh" > /app/start.sh && echo "node /app/seed-user.js || true" >> /app/start.sh && echo "exec npm run backend" >> /app/start.sh && chmod +x /app/start.sh' >> Dockerfile.evidence
+          echo 'CMD ["/bin/sh", "/app/start.sh"]' >> Dockerfile.evidence
           docker build \
             -f Dockerfile.evidence \
             -t ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }} \

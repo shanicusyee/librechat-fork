@@ -2,8 +2,8 @@ version: "1.3.9"
 endpoints:
   bedrock:
     availableRegions:
-      - ap-southeast-1
       - us-east-1
       - us-west-2
-    titleModel: "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+      - ap-southeast-1
     streamRate: 50
+    titleModel: "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
