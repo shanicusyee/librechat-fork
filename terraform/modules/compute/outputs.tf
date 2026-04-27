@@ -20,5 +20,5 @@ output "ecs_cluster_name" {
 
 output "ecr_repository_url" {
   description = "URL of the ECR repository for the custom LibreChat image"
-  value       = aws_ecr_repository.librechat.repository_url
+  value       = data.aws_ecr_repository.librechat.repository_url
 }
