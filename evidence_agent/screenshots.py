@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PAGES_CONFIG: list[dict[str, str | None]] = [
     {"name": "login-page", "url": None},
-    {"name": "chat-interface", "url": "/chat/new"},
+    {"name": "chat-interface", "url": "/c/new"},
 ]
 
 

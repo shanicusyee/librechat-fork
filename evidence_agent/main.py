@@ -73,7 +73,91 @@ def main() -> None:
     # --- 2. Browser session: capture screenshots ---
     try:
         with create_browser_session(config.app_url, timeout=config.connection_timeout, region=config.aws_region) as page:
-            screenshot_results = capture_all_screenshots(page)
+            from evidence_agent.screenshots import capture_page_screenshot
+            screenshot_results = []
+
+            # 2a. Login page screenshot
+            login_screenshot = capture_page_screenshot(page, "login-page")
+            screenshot_results.append(login_screenshot)
+
+            # 2b. Log in with demo user
+            try:
+                page.fill('input[name="email"]', 'demo@example.com')
+                page.fill('input[name="password"]', 'demodemo123')
+                page.click('button[type="submit"]')
+                page.wait_for_url("**/c/**", timeout=30000)
+                page.wait_for_timeout(3000)
+                logger.info("Logged in as demo user")
+            except Exception as login_err:
+                logger.warning("Login failed: %s", login_err)
+
+            # 2c. Chat interface screenshot (empty state)
+            chat_screenshot = capture_page_screenshot(page, "chat-interface")
+            screenshot_results.append(chat_screenshot)
+
+            # 2d. Model selector screenshot — click the model dropdown
+            try:
+                # LibreChat model selector is typically in the header/nav area
+                model_btn = page.locator('[data-testid="model-selector"], button:has-text("Claude"), button:has-text("Nova"), [class*="model"]').first
+                if model_btn.is_visible(timeout=5000):
+                    model_btn.click()
+                    page.wait_for_timeout(1000)
+                    model_selector_screenshot = capture_page_screenshot(page, "model-selector")
+                    screenshot_results.append(model_selector_screenshot)
+                    # Close dropdown by pressing Escape
+                    page.keyboard.press("Escape")
+                    page.wait_for_timeout(500)
+                else:
+                    logger.warning("Model selector not found, skipping screenshot")
+            except Exception as model_err:
+                logger.warning("Model selector screenshot failed: %s", model_err)
+
+            # 2e. Test Claude model — send a message and capture response
+            try:
+                logger.info("Testing Claude model — sending message")
+                textarea = page.locator('textarea[placeholder*="Message"], textarea[id="prompt-textarea"], textarea').first
+                textarea.fill("Hello! What model are you? Reply in one short sentence.")
+                textarea.press("Enter")
+                # Wait for response to appear
+                page.wait_for_timeout(15000)
+                claude_screenshot = capture_page_screenshot(page, "claude-response")
+                screenshot_results.append(claude_screenshot)
+                logger.info("Claude response captured")
+            except Exception as claude_err:
+                logger.warning("Claude test failed: %s", claude_err)
+
+            # 2f. New chat + test Nova model
+            try:
+                logger.info("Starting new chat for Nova model test")
+                # Click new chat button
+                new_chat_btn = page.locator('a[href="/c/new"], button[aria-label*="New"], nav a:first-child').first
+                if new_chat_btn.is_visible(timeout=5000):
+                    new_chat_btn.click()
+                    page.wait_for_timeout(2000)
+
+                # Try to switch model to Nova
+                model_btn = page.locator('[data-testid="model-selector"], button:has-text("Claude"), button:has-text("Nova"), [class*="model"]').first
+                if model_btn.is_visible(timeout=5000):
+                    model_btn.click()
+                    page.wait_for_timeout(1000)
+                    # Look for Nova option
+                    nova_option = page.locator('text=Nova').first
+                    if nova_option.is_visible(timeout=3000):
+                        nova_option.click()
+                        page.wait_for_timeout(1000)
+                        logger.info("Switched to Nova model")
+
+                # Send message to Nova
+                textarea = page.locator('textarea[placeholder*="Message"], textarea[id="prompt-textarea"], textarea').first
+                textarea.fill("What is 2+2? Reply in one short sentence.")
+                textarea.press("Enter")
+                page.wait_for_timeout(15000)
+                nova_screenshot = capture_page_screenshot(page, "nova-response")
+                screenshot_results.append(nova_screenshot)
+                logger.info("Nova response captured")
+            except Exception as nova_err:
+                logger.warning("Nova test failed: %s", nova_err)
+
     except BrowserConnectionError as exc:
         logger.error("Browser connection failed: %s", exc)
         sys.exit(1)
