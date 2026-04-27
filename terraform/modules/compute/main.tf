@@ -184,19 +184,6 @@ resource "aws_ecs_task_definition" "app" {
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
-  volume {
-    name = "mongodb-data"
-
-    efs_volume_configuration {
-      file_system_id     = var.efs_file_system_id
-      transit_encryption = "ENABLED"
-      authorization_config {
-        access_point_id = var.efs_access_point_id
-        iam             = "DISABLED"
-      }
-    }
-  }
-
   container_definitions = jsonencode([
     {
       name      = "librechat"
@@ -218,7 +205,7 @@ resource "aws_ecs_task_definition" "app" {
         interval    = 30
         timeout     = 5
         retries     = 3
-        startPeriod = 60
+        startPeriod = 120
       }
       logConfiguration = {
         logDriver = "awslogs"
@@ -238,13 +225,6 @@ resource "aws_ecs_task_definition" "app" {
           containerPort = 27017
           hostPort      = 27017
           protocol      = "tcp"
-        }
-      ]
-      mountPoints = [
-        {
-          sourceVolume  = "mongodb-data"
-          containerPath = "/data/db"
-          readOnly      = false
         }
       ]
       logConfiguration = {

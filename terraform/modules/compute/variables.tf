@@ -23,16 +23,6 @@ variable "ecs_security_group_id" {
   type        = string
 }
 
-variable "efs_file_system_id" {
-  description = "ID of the EFS file system for MongoDB persistence"
-  type        = string
-}
-
-variable "efs_access_point_id" {
-  description = "ID of the EFS access point for MongoDB"
-  type        = string
-}
-
 variable "s3_bucket_arn" {
   description = "ARN of the S3 evidence bucket"
   type        = string

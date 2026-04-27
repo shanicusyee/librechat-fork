@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "instance_size" {
   description = "Fargate instance size mapping to CPU/memory (e.g. small, medium, large)"
   type        = string
-  default     = "small"
+  default     = "medium"
 }
 
 variable "s3_bucket_name" {

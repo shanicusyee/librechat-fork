@@ -7,18 +7,3 @@ output "s3_bucket_arn" {
   description = "ARN of the S3 evidence bucket"
   value       = data.aws_s3_bucket.evidence.arn
 }
-
-output "efs_file_system_id" {
-  description = "ID of the EFS file system for MongoDB persistence"
-  value       = aws_efs_file_system.mongodb.id
-}
-
-output "efs_security_group_id" {
-  description = "Security group ID for the EFS mount targets"
-  value       = aws_security_group.efs.id
-}
-
-output "efs_access_point_id" {
-  description = "EFS access point ID for MongoDB"
-  value       = aws_efs_access_point.mongodb.id
-}
