@@ -72,7 +72,7 @@ def main() -> None:
 
     # --- 2. Browser session: capture screenshots ---
     try:
-        with create_browser_session(config.app_url, timeout=config.connection_timeout) as page:
+        with create_browser_session(config.app_url, timeout=config.connection_timeout, region=config.aws_region) as page:
             screenshot_results = capture_all_screenshots(page)
     except BrowserConnectionError as exc:
         logger.error("Browser connection failed: %s", exc)

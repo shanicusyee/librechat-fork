@@ -103,6 +103,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       app_url: ${{ steps.alb-url.outputs.app_url }}
+      runner_ip: ${{ steps.runner-info.outputs.runner_ip }}
+      alb_sg: ${{ steps.runner-info.outputs.alb_sg }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -145,6 +147,25 @@ jobs:
           ALB_URL=$(terraform output -raw alb_url)
           echo "app_url=${ALB_URL}" >> "$GITHUB_OUTPUT"
           echo "ALB URL: ${ALB_URL}"
+
+      - name: Get runner IP and ALB Security Group
+        id: runner-info
+        working-directory: terraform
+        run: |
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          ALB_SG=$(terraform output -raw alb_security_group_id)
+          echo "runner_ip=${RUNNER_IP}" >> "$GITHUB_OUTPUT"
+          echo "alb_sg=${ALB_SG}" >> "$GITHUB_OUTPUT"
+          echo "Runner IP: ${RUNNER_IP}, ALB SG: ${ALB_SG}"
+
+      - name: Add runner IP to ALB security group
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id "${{ steps.runner-info.outputs.alb_sg }}" \
+            --protocol tcp \
+            --port 80 \
+            --cidr "${{ steps.runner-info.outputs.runner_ip }}/32" \
+            --region ap-southeast-1 || true
 
       - name: Force new ECS deployment
         run: |
@@ -203,6 +224,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r evidence_agent/requirements.txt
 
+      - name: Get runner IP and add to ALB security group
+        id: evidence-runner
+        run: |
+          RUNNER_IP=$(curl -s https://checkip.amazonaws.com)
+          echo "runner_ip=${RUNNER_IP}" >> "$GITHUB_OUTPUT"
+          aws ec2 authorize-security-group-ingress \
+            --group-id "${{ needs.deploy-dev.outputs.alb_sg }}" \
+            --protocol tcp \
+            --port 80 \
+            --cidr "${RUNNER_IP}/32" \
+            --region ap-southeast-1 || true
+
       - name: Download test results artifact
         uses: actions/download-artifact@v4
         with:
@@ -242,3 +275,19 @@ jobs:
           echo "S3_BUCKET: (from secrets)"
           echo "GITHUB_RUN_ID: ${{ github.run_id }}"
           echo "AWS_REGION: ap-southeast-1"
+
+      - name: Remove runner IPs from ALB security group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id "${{ needs.deploy-dev.outputs.alb_sg }}" \
+            --protocol tcp \
+            --port 80 \
+            --cidr "${{ needs.deploy-dev.outputs.runner_ip }}/32" \
+            --region ap-southeast-1 || true
+          aws ec2 revoke-security-group-ingress \
+            --group-id "${{ needs.deploy-dev.outputs.alb_sg }}" \
+            --protocol tcp \
+            --port 80 \
+            --cidr "${{ steps.evidence-runner.outputs.runner_ip }}/32" \
+            --region ap-southeast-1 || true

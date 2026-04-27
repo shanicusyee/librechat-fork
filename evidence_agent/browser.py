@@ -32,7 +32,7 @@ class BrowserConnectionError(Exception):
 
 
 @contextmanager
-def create_browser_session(app_url: str, timeout: int = 60):
+def create_browser_session(app_url: str, timeout: int = 60, region: str = "ap-southeast-1"):
     """Create an AgentCore Browser session and yield a Playwright Page.
 
     Opens a managed browser session via the bedrock-agentcore SDK,
@@ -55,7 +55,7 @@ def create_browser_session(app_url: str, timeout: int = 60):
     browser = None
 
     try:
-        with browser_session() as session:
+        with browser_session(region=region) as session:
             logger.info("AgentCore Browser session created, connecting Playwright via CDP")
             playwright = sync_playwright().start()
             browser = playwright.chromium.connect_over_cdp(session.cdp_endpoint)

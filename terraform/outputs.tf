@@ -27,3 +27,8 @@ output "ecr_repository_url" {
   description = "URL of the ECR repository for the custom LibreChat image"
   value       = module.compute.ecr_repository_url
 }
+
+output "alb_security_group_id" {
+  description = "Security group ID for the ALB"
+  value       = module.networking.alb_security_group_id
+}
