@@ -8,6 +8,11 @@ output "alb_url" {
   value       = module.compute.alb_url
 }
 
+output "app_url" {
+  description = "CloudFront HTTPS URL"
+  value       = module.compute.app_url
+}
+
 output "s3_bucket_name" {
   description = "Name of the S3 evidence bucket"
   value       = module.storage.s3_bucket_name

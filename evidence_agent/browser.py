@@ -61,7 +61,15 @@ def create_browser_session(app_url: str, timeout: int = 60, region: str = "ap-so
             page.set_default_navigation_timeout(timeout * 1000)
 
             logger.info("Navigating to %s (timeout=%ds)", app_url, timeout)
-            page.goto(app_url, wait_until="load", timeout=timeout * 1000)
+            try:
+                page.goto(app_url, wait_until="domcontentloaded", timeout=timeout * 1000)
+            except Exception as nav_err:
+                if "ERR_BLOCKED_BY_CLIENT" in str(nav_err) and app_url.startswith("http://"):
+                    https_url = app_url.replace("http://", "https://", 1)
+                    logger.warning("HTTP blocked, retrying with HTTPS: %s", https_url)
+                    page.goto(https_url, wait_until="domcontentloaded", timeout=timeout * 1000)
+                else:
+                    raise
             logger.info("Successfully connected to %s", app_url)
 
             yield page

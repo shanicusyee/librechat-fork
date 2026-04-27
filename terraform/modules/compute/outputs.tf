@@ -3,6 +3,11 @@ output "alb_url" {
   value       = "http://${aws_lb.main.dns_name}"
 }
 
+output "app_url" {
+  description = "CloudFront HTTPS URL (public entry point)"
+  value       = "https://${aws_cloudfront_distribution.app.domain_name}"
+}
+
 output "alb_dns_name" {
   description = "Raw DNS name of the ALB"
   value       = aws_lb.main.dns_name

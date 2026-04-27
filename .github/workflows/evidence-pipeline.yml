@@ -103,6 +103,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       app_url: ${{ steps.alb-url.outputs.app_url }}
+      cf_url: ${{ steps.alb-url.outputs.cf_url }}
       runner_ip: ${{ steps.runner-info.outputs.runner_ip }}
       alb_sg: ${{ steps.runner-info.outputs.alb_sg }}
     steps:
@@ -145,8 +146,11 @@ jobs:
         working-directory: terraform
         run: |
           ALB_URL=$(terraform output -raw alb_url)
+          APP_URL=$(terraform output -raw app_url)
           echo "app_url=${ALB_URL}" >> "$GITHUB_OUTPUT"
+          echo "cf_url=${APP_URL}" >> "$GITHUB_OUTPUT"
           echo "ALB URL: ${ALB_URL}"
+          echo "CloudFront URL: ${APP_URL}"
 
       - name: Get runner IP and ALB Security Group
         id: runner-info
@@ -245,7 +249,7 @@ jobs:
       - name: Run Evidence Agent
         id: evidence-run
         env:
-          APP_URL: ${{ needs.deploy-dev.outputs.app_url }}
+          APP_URL: ${{ needs.deploy-dev.outputs.cf_url }}
           S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           AWS_REGION: ap-southeast-1
