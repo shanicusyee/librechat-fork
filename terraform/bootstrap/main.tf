@@ -176,6 +176,7 @@ resource "aws_iam_role_policy" "github_actions" {
           "ec2:*",
           "elasticloadbalancing:*",
           "efs:*",
+          "elasticfilesystem:*",
           "logs:*",
           "iam:GetRole",
           "iam:CreateRole",
