@@ -17,3 +17,8 @@ output "efs_security_group_id" {
   description = "Security group ID for the EFS mount targets"
   value       = aws_security_group.efs.id
 }
+
+output "efs_access_point_id" {
+  description = "EFS access point ID for MongoDB"
+  value       = aws_efs_access_point.mongodb.id
+}

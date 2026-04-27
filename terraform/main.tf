@@ -37,6 +37,7 @@ module "compute" {
   alb_security_group_id = module.networking.alb_security_group_id
   ecs_security_group_id = module.networking.ecs_security_group_id
   efs_file_system_id    = module.storage.efs_file_system_id
+  efs_access_point_id   = module.storage.efs_access_point_id
   s3_bucket_arn         = module.storage.s3_bucket_arn
   project_name          = var.project_name
   instance_size         = var.instance_size

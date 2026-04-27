@@ -16,6 +16,28 @@ resource "aws_efs_file_system" "mongodb" {
   }
 }
 
+resource "aws_efs_access_point" "mongodb" {
+  file_system_id = aws_efs_file_system.mongodb.id
+
+  posix_user {
+    uid = 999
+    gid = 999
+  }
+
+  root_directory {
+    path = "/mongodb"
+    creation_info {
+      owner_uid   = 999
+      owner_gid   = 999
+      permissions = "755"
+    }
+  }
+
+  tags = {
+    Name = "${var.project_name}-mongodb-efs-ap"
+  }
+}
+
 resource "aws_security_group" "efs" {
   name        = "${var.project_name}-efs-sg"
   description = "Allow NFS traffic from VPC CIDR"
