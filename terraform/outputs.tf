@@ -4,13 +4,8 @@ output "aws_region" {
 }
 
 output "alb_url" {
-  description = "URL of the Application Load Balancer (internal)"
+  description = "URL of the Application Load Balancer"
   value       = module.compute.alb_url
-}
-
-output "app_url" {
-  description = "CloudFront URL (public entry point)"
-  value       = module.compute.app_url
 }
 
 output "s3_bucket_name" {

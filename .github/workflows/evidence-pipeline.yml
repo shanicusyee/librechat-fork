@@ -132,13 +132,13 @@ jobs:
           terraform apply -auto-approve \
             -var="s3_bucket_name=${{ secrets.S3_BUCKET_NAME }}"
 
-      - name: Get App URL
+      - name: Get ALB URL
         id: alb-url
         working-directory: terraform
         run: |
-          APP_URL=$(terraform output -raw app_url)
-          echo "app_url=${APP_URL}" >> "$GITHUB_OUTPUT"
-          echo "App URL: ${APP_URL}"
+          ALB_URL=$(terraform output -raw alb_url)
+          echo "app_url=${ALB_URL}" >> "$GITHUB_OUTPUT"
+          echo "ALB URL: ${ALB_URL}"
 
       - name: Force new ECS deployment
         run: |

@@ -20,3 +20,9 @@ variable "project_name" {
   type        = string
   default     = "evidence-pipeline-chat-app"
 }
+
+variable "allowed_cidr_blocks" {
+  description = "CIDR blocks allowed to access the ALB"
+  type        = list(string)
+  default     = ["58.182.144.93/32"]
+}

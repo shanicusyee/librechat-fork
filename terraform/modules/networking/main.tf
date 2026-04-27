@@ -110,22 +110,17 @@ resource "aws_route_table_association" "private" {
 
 # --- Security Groups ---
 
-# AWS-managed prefix list for CloudFront origin-facing IPs
-data "aws_ec2_managed_prefix_list" "cloudfront" {
-  name = "com.amazonaws.global.cloudfront.origin-facing"
-}
-
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb-sg"
-  description = "Allow HTTP inbound from CloudFront only"
+  description = "Allow HTTP inbound from allowed IPs only"
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "HTTP from CloudFront"
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
+    description = "HTTP from allowed IP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_cidr_blocks
   }
 
   egress {

@@ -12,8 +12,9 @@ provider "aws" {
 # --- Networking ---
 
 module "networking" {
-  source       = "./modules/networking"
-  project_name = var.project_name
+  source              = "./modules/networking"
+  project_name        = var.project_name
+  allowed_cidr_blocks = var.allowed_cidr_blocks
 }
 
 # --- Storage ---
