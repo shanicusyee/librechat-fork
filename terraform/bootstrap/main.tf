@@ -192,6 +192,7 @@ resource "aws_iam_role_policy" "github_actions" {
           "iam:TagRole",
           "iam:UntagRole",
           "acm:*",
+          "cloudfront:*",
           "s3:CreateBucket",
           "s3:DeleteBucket",
           "s3:GetBucketPolicy",

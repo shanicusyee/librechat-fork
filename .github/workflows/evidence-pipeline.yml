@@ -132,13 +132,13 @@ jobs:
           terraform apply -auto-approve \
             -var="s3_bucket_name=${{ secrets.S3_BUCKET_NAME }}"
 
-      - name: Get ALB URL
+      - name: Get App URL
         id: alb-url
         working-directory: terraform
         run: |
-          ALB_URL=$(terraform output -raw alb_url)
-          echo "app_url=${ALB_URL}" >> "$GITHUB_OUTPUT"
-          echo "ALB URL: ${ALB_URL}"
+          APP_URL=$(terraform output -raw app_url)
+          echo "app_url=${APP_URL}" >> "$GITHUB_OUTPUT"
+          echo "App URL: ${APP_URL}"
 
       - name: Force new ECS deployment
         run: |
@@ -153,7 +153,7 @@ jobs:
       - name: Poll health check endpoint
         run: |
           APP_URL="${{ steps.alb-url.outputs.app_url }}"
-          HEALTH_URL="${APP_URL}/api/health"
+          HEALTH_URL="${APP_URL}"
           echo "Polling ${HEALTH_URL} for HTTP 200 (timeout: 300s)..."
           SECONDS=0
           while [ $SECONDS -lt 300 ]; do

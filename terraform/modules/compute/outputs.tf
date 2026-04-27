@@ -1,6 +1,11 @@
 output "alb_url" {
-  description = "DNS name of the Application Load Balancer (app URL)"
+  description = "DNS name of the Application Load Balancer (internal)"
   value       = "http://${aws_lb.main.dns_name}"
+}
+
+output "app_url" {
+  description = "CloudFront URL (public entry point)"
+  value       = "https://${aws_cloudfront_distribution.app.domain_name}"
 }
 
 output "alb_dns_name" {

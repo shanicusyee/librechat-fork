@@ -206,7 +206,7 @@ resource "aws_ecs_task_definition" "app" {
         { name = "ALLOW_REGISTRATION", value = "true" }
       ]
       healthCheck = {
-        command     = ["CMD-SHELL", "wget -qO- http://localhost:3080/api/health || exit 1"]
+        command     = ["CMD-SHELL", "wget -qO- http://localhost:3080/ || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3
@@ -252,10 +252,10 @@ resource "aws_ecs_task_definition" "app" {
 
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
-  internal           = false
+  internal           = true
   load_balancer_type = "application"
   security_groups    = [var.alb_security_group_id]
-  subnets            = var.public_subnet_ids
+  subnets            = var.private_subnet_ids
 
   tags = {
     Name = "${var.project_name}-alb"
@@ -271,7 +271,7 @@ resource "aws_lb_target_group" "app" {
 
   health_check {
     enabled             = true
-    path                = "/api/health"
+    path                = "/"
     port                = "traffic-port"
     protocol            = "HTTP"
     matcher             = "200"
@@ -326,5 +326,60 @@ resource "aws_ecs_service" "app" {
 
   tags = {
     Name = "${var.project_name}-service"
+  }
+}
+
+# --- CloudFront Distribution ---
+
+resource "aws_cloudfront_distribution" "app" {
+  enabled         = true
+  comment         = "${var.project_name} - CloudFront to ALB"
+  price_class     = "PriceClass_200"
+  is_ipv6_enabled = true
+
+  origin {
+    domain_name = aws_lb.main.dns_name
+    origin_id   = "alb-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  default_cache_behavior {
+    allowed_methods        = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "alb-origin"
+    viewer_protocol_policy = "allow-all"
+
+    forwarded_values {
+      query_string = true
+      headers      = ["Host", "Origin", "Authorization", "Accept", "Content-Type"]
+
+      cookies {
+        forward = "all"
+      }
+    }
+
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  tags = {
+    Name = "${var.project_name}-cloudfront"
   }
 }
