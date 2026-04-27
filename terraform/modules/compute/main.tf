@@ -223,7 +223,7 @@ resource "aws_ecs_task_definition" "app" {
     },
     {
       name      = "mongodb"
-      image     = "mongo:7"
+      image     = "public.ecr.aws/docker/library/mongo:7"
       essential = true
       portMappings = [
         {
