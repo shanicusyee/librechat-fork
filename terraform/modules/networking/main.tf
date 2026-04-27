@@ -117,35 +117,41 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb-sg"
-  description = "Allow HTTP from CloudFront and allowed IPs"
+  description = "Allow HTTP and HTTPS inbound to ALB"
   vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "HTTP from CloudFront"
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    prefix_list_ids = [data.aws_ec2_managed_prefix_list.cloudfront.id]
-  }
-
-  ingress {
-    description = "HTTP from allowed IPs"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_cidr_blocks
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 
   tags = {
     Name = "${var.project_name}-alb-sg"
   }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_cloudfront" {
+  security_group_id  = aws_security_group.alb.id
+  description        = "HTTP from CloudFront"
+  from_port          = 80
+  to_port            = 80
+  ip_protocol        = "tcp"
+  prefix_list_id     = data.aws_ec2_managed_prefix_list.cloudfront.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_allowed_ips" {
+  for_each          = toset(var.allowed_cidr_blocks)
+  security_group_id = aws_security_group.alb.id
+  description       = "HTTP from allowed IP"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
+}
+
+resource "aws_vpc_security_group_egress_rule" "alb_all" {
+  security_group_id = aws_security_group.alb.id
+  ip_protocol       = "-1"
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 resource "aws_security_group" "ecs" {
