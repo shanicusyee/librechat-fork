@@ -1,21 +1,10 @@
-# --- S3 Evidence Bucket ---
+# --- S3 Evidence Bucket (created by bootstrap, referenced here) ---
 
-resource "aws_s3_bucket" "evidence" {
-  bucket        = var.s3_bucket_name
-  force_destroy = true
-
-  tags = {
-    Name = "${var.project_name}-evidence-bucket"
-  }
+data "aws_s3_bucket" "evidence" {
+  bucket = var.s3_bucket_name
 }
 
-resource "aws_s3_bucket_versioning" "evidence" {
-  bucket = aws_s3_bucket.evidence.id
-
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
+# No versioning resource needed — bucket is managed by bootstrap
 
 # --- EFS File System (MongoDB Persistence) ---
 

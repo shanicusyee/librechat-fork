@@ -16,16 +16,10 @@ locals {
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
-# --- ECR Repository ---
+# --- ECR Repository (created by bootstrap, referenced here) ---
 
-resource "aws_ecr_repository" "librechat" {
-  name                 = "${var.project_name}-librechat"
-  image_tag_mutability = "MUTABLE"
-  force_delete         = true
-
-  tags = {
-    Name = "${var.project_name}-librechat-ecr"
-  }
+data "aws_ecr_repository" "librechat" {
+  name = var.project_name
 }
 
 # --- CloudWatch Log Group ---
@@ -202,7 +196,7 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([
     {
       name      = "librechat"
-      image     = "${aws_ecr_repository.librechat.repository_url}:latest"
+      image     = "${data.aws_ecr_repository.librechat.repository_url}:latest"
       essential = true
       portMappings = [
         {

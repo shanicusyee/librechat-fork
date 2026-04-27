@@ -124,14 +124,7 @@ resource "aws_iam_role_policy" "github_actions" {
         Sid    = "ECR"
         Effect = "Allow"
         Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:PutImage",
-          "ecr:InitiateLayerUpload",
-          "ecr:UploadLayerPart",
-          "ecr:CompleteLayerUpload"
+          "ecr:*"
         ]
         Resource = "*"
       },
@@ -139,14 +132,7 @@ resource "aws_iam_role_policy" "github_actions" {
         Sid    = "ECS"
         Effect = "Allow"
         Action = [
-          "ecs:UpdateService",
-          "ecs:DescribeServices",
-          "ecs:DescribeClusters",
-          "ecs:DescribeTaskDefinition",
-          "ecs:RegisterTaskDefinition",
-          "ecs:DeregisterTaskDefinition",
-          "ecs:ListTasks",
-          "ecs:DescribeTasks"
+          "ecs:*"
         ]
         Resource = "*"
       },
