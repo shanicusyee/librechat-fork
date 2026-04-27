@@ -252,10 +252,10 @@ resource "aws_ecs_task_definition" "app" {
 
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
-  internal           = true
+  internal           = false
   load_balancer_type = "application"
   security_groups    = [var.alb_security_group_id]
-  subnets            = var.private_subnet_ids
+  subnets            = var.public_subnet_ids
 
   tags = {
     Name = "${var.project_name}-alb"
