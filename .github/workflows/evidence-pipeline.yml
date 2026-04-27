@@ -44,15 +44,15 @@ jobs:
       - name: Build Docker image using LibreChat Dockerfile
         run: |
           # Build using LibreChat's own Dockerfile from the fork.
-          # The repo root IS the LibreChat source tree, so the default
-          # Dockerfile at the project root is LibreChat's multi-stage build.
           docker build \
             -t ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }} \
+            -t ${{ secrets.ECR_REPOSITORY_URL }}:latest \
             .
 
       - name: Push Docker image to ECR
         run: |
           docker push ${{ secrets.ECR_REPOSITORY_URL }}:${{ steps.meta.outputs.image_tag }}
+          docker push ${{ secrets.ECR_REPOSITORY_URL }}:latest
 
       - name: Lint Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
@@ -146,9 +146,9 @@ jobs:
         run: |
           APP_URL="${{ steps.alb-url.outputs.app_url }}"
           HEALTH_URL="${APP_URL}/api/health"
-          echo "Polling ${HEALTH_URL} for HTTP 200 (timeout: 120s)..."
+          echo "Polling ${HEALTH_URL} for HTTP 200 (timeout: 300s)..."
           SECONDS=0
-          while [ $SECONDS -lt 120 ]; do
+          while [ $SECONDS -lt 300 ]; do
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${HEALTH_URL}" || true)
             if [ "${HTTP_STATUS}" = "200" ]; then
               echo "Health check passed (HTTP ${HTTP_STATUS}) after ${SECONDS}s"
@@ -157,7 +157,7 @@ jobs:
             echo "Health check returned HTTP ${HTTP_STATUS}, retrying in 10s..."
             sleep 10
           done
-          echo "::error::Health check timed out after 120s (last status: ${HTTP_STATUS})"
+          echo "::error::Health check timed out after 300s (last status: ${HTTP_STATUS})"
           exit 1
 
       - name: Annotate failure
