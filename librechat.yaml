@@ -1,14 +1,12 @@
-# librechat.yaml — Bedrock endpoint configuration (cross-region inference)
+version: "1.3.9"
 endpoints:
   bedrock:
     enabled: true
     availableRegions:
       - ap-southeast-1
     models:
-      default:
-        - us.anthropic.claude-3-5-sonnet-20241022-v2:0
-        - us.amazon.nova-micro-v1:0
-      fetch: false
+      - us.anthropic.claude-3-5-sonnet-20241022-v2:0
+      - us.amazon.nova-micro-v1:0
     titleModel: "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
     summarize: true
     summaryModel: "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
