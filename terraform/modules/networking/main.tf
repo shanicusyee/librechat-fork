@@ -117,7 +117,7 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 
 resource "aws_security_group" "alb" {
   name        = "${var.project_name}-alb-sg"
-  description = "Allow HTTP and HTTPS inbound to ALB"
+  description = "Allow HTTP inbound from allowed IPs only"
   vpc_id      = aws_vpc.main.id
 
   tags = {
